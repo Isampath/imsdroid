@@ -115,6 +115,8 @@ public class NgnPublicationSession extends NgnSipSession {
 	}
 
 	public boolean publish(byte[] bytes, String event, String contentType) {
+
+		Log.d(TAG," Publish method excuted");
 		if (bytes != null) {
 			final java.nio.ByteBuffer byteBuffer = java.nio.ByteBuffer.allocateDirect(bytes.length);
 			byteBuffer.put(bytes);

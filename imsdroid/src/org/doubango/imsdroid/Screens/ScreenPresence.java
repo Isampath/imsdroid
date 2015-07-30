@@ -80,7 +80,7 @@ public class ScreenPresence  extends BaseScreen{
 	private final INgnSipService mSipService;
 	
 	public ScreenPresence() {
-		super(SCREEN_TYPE.PRESENCE_T, ScreenPresence.class.getCanonicalName());
+		super(SCREEN_TYPE.PRESENCE_T, TAG);
 		
 		mConfigurationService = getEngine().getConfigurationService();
 		mSipService = getEngine().getSipService();
@@ -118,11 +118,11 @@ public class ScreenPresence  extends BaseScreen{
         mCbEnablePresence.setOnCheckedChangeListener(cbEnablePresence_OnCheckedChangeListener);
         
         // add listeners (for the configuration)
-        /* addConfigurationListener(cbEnablePresence); */
-        addConfigurationListener(mCbEnableRLS);
-        addConfigurationListener(mCbEnablePartialPub);
-        addConfigurationListener(mEtFreeText);
-        /* addConfigurationListener(spStatus); */
+        super.addConfigurationListener(mCbEnablePresence);
+        super.addConfigurationListener(mCbEnableRLS);
+        super.addConfigurationListener(mCbEnablePartialPub);
+        super.addConfigurationListener(mEtFreeText);
+        super.addConfigurationListener(mSpStatus);
         
         // Camera
         mPreview = new Preview(this);
@@ -145,7 +145,7 @@ public class ScreenPresence  extends BaseScreen{
 			// publish if needed (Status is done below)
 			if(!oldFreeText.equals(newFreeText)){
 				if(mSipService.isRegistered()){
-					// -- mSipService.publish();
+					mSipService.PresencePublish();
 				}
 			}
 			
@@ -171,6 +171,7 @@ public class ScreenPresence  extends BaseScreen{
 		public void onCheckedChanged(CompoundButton arg0, boolean isChecked) {
 			mRlPresence.setVisibility(isChecked? View.VISIBLE : View.INVISIBLE);
 			mComputeConfiguration = true;
+			Log.d(TAG,"presence checked");
 		}
 	};
 	
@@ -179,8 +180,10 @@ public class ScreenPresence  extends BaseScreen{
 			mConfigurationService.putString(NgnConfigurationEntry.RCS_STATUS, 
 					sSpinnerStatusItems[position].mStatus.toString());
 			// ServiceManager.getMainActivity().setStatus(ScreenPresence.sSpinnerStatusItems[position].mDrawableId);
+			Log.d(TAG,"Presence selected");
 			if(mSipService.isRegistered()){
-				//-- mSipService.publish();
+				mSipService.PresencePublish(sSpinnerStatusItems[position].mStatus);
+				Log.d(TAG,"ON presence status changed event status :"+sSpinnerStatusItems[position].mStatus.toString());
 			}
 		}
 		public void onNothingSelected(AdapterView<?> arg0) {

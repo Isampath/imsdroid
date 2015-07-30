@@ -231,7 +231,9 @@ private InputMethodManager mInputMethodManager;
 					@Override
 					public boolean apply(NgnMsrpSession session) {
 						if(session != null && session.getMediaType() == NgnMediaType.Chat){
+							Log.e(TAG, " MSRP session start");
 							return NgnStringUtils.equals(session.getRemotePartyUri(), validUri, false);
+
 						}
 						return false;
 					}

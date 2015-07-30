@@ -27,7 +27,8 @@ import org.doubango.tinyWRAP.SubscriptionSession;
 public class NgnSubscriptionSession extends NgnSipSession{
 	private final SubscriptionSession mSession;
 	private final EventPackageType mPackage;
-	
+
+
 	public enum EventPackageType {
 		None,
 		
@@ -60,6 +61,7 @@ public class NgnSubscriptionSession extends NgnSipSession{
 				long id = session.getId();
 				session.decRef();
 				sSessions.remove(id);
+
 			}
 		}
 	}

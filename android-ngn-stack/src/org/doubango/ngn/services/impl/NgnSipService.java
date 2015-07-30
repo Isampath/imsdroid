@@ -100,6 +100,8 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 	private final static String TAG = NgnSipService.class.getCanonicalName();
 
 	private NgnRegistrationSession mRegSession;
+	private NgnPublicationSession mPubSession;
+	private NgnSubscriptionSession mSubSession;
 	private NgnSipStack mSipStack;
 	private final DDebugCallback mDebugCallback;
 	private final MySipCallback mSipCallback;
@@ -446,13 +448,31 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 				NgnConfigurationEntry.RCS_USE_MWI,
 				NgnConfigurationEntry.DEFAULT_RCS_USE_MWI));
 
+		final String pStatus =mConfigurationService.getString(NgnConfigurationEntry.RCS_STATUS,NgnConfigurationEntry.DEFAULT_RCS_STATUS.toString());
+
+
 		// Create registration session
 		if (mRegSession == null) {
 			mRegSession = new NgnRegistrationSession(mSipStack);
+
 		} else {
 			mRegSession.setSigCompId(mSipStack.getSigCompId());
 		}
 
+		// Create registration session
+		if (mPubSession == null) {
+			mPubSession = NgnPublicationSession.createOutgoingSession(mSipStack,mPreferences.getIMPU());
+			Log.d(TAG,"Ngn Publication Session started");
+
+		} else {
+			//mRegSession.setSigCompId(mSipStack.getSigCompId());
+		}
+		if(mSubSession == null){
+			mSubSession = NgnSubscriptionSession.createOutgoingSession(mSipStack,"sip:773330002@sip2sip.info", EventPackageType.Presence);
+			mSubSession.setFromUri("sip:773330001@sip2sip.info");
+
+			Log.d(TAG,"Ngn Subscription Session started" + mPreferences.getIMPU());
+		}
 		// Set/update From URI. For Registration ToUri should be equals to realm
 		// (done by the stack)
 		mRegSession.setFromUri(mPreferences.getIMPU());
@@ -488,6 +508,80 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 			return false;
 		}
 
+		if(mSubSession.subscribe()){
+			Log.d(TAG,"Subscribed successfully");
+		}
+		else{
+			Log.d(TAG,"Subscription failed");
+		}
+
+		//make payload
+
+		final String PUBLISH_String = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+				"<presence xmlns:caps=\"urn:ietf:params:xml:ns:pidf:caps\" xmlns:rpid=\"urn:ietf:params:xml:ns:pidf:rpid\" xmlns:pdm=\"urn:ietf:params:xml:ns:pidf:data-model\" xmlns:op=\"urn:oma:xml:prs:pidf:oma-pres\" entity=\"%s\" xmlns=\"urn:ietf:params:xml:ns:pidf\">" +
+				"<pdm:person id=\"FPNZFGON\">" +
+				"<op:overriding-willingness>" +
+				"<op:basic>%s</op:basic>" +
+				"</op:overriding-willingness>" +
+				"<rpid:activities>" +
+				"<rpid:%s />" +
+				"</rpid:activities>" +
+				"<pdm:note>%s</pdm:note>" +
+				"</pdm:person>" +
+				"<pdm:device id=\"d1983\">" +
+				"<status>" +
+				"<basic>%s</basic>" +
+				"</status>" +
+				"<caps:devcaps>" +
+				"<caps:mobility>" +
+				"<caps:supported>" +
+				"<caps:mobile />" +
+				"</caps:supported>" +
+				"</caps:mobility>" +
+				"</caps:devcaps>" +
+				"<op:network-availability>" +
+				"<op:network id=\"IMS\">" +
+				"<op:active />" +
+				"</op:network>" +
+				"</op:network-availability>" +
+				"<pdm:deviceID>%s</pdm:deviceID>" +
+				"</pdm:device>" +
+				"</presence>";
+
+		String basic ="open";
+		String activity = "busy";
+		String note = "TEST DEVICE";
+		String device = "device";
+		String PUBLISH_PAYLOAD = String.format(PUBLISH_String,
+				mPreferences.getIMPU(), basic, activity, note, basic, device);
+/*		final String PUBLISH_PAYLOAD =
+		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+
+		"<presence"+
+		"xmlns:dm=\"urn:ietf:params:xml:ns:pidf:data-model\""+
+		"xmlns:caps=\"urn:ietf:params:xml:ns:pidf:caps\""+
+		"xmlns:rpid=\"urn:ietf:params:xml:ns:pidf:rpid\""+
+		"xmlns:agp-pidf=\"urn:ag-projects:xml:ns:pidf\""+
+		"xmlns=\"urn:ietf:params:xml:ns:pidf\" entity=\"sip%3A773330001%40sip2sip.info\">"+
+		"<tuple id=\"SID-65494e5a9a87df809859d26f31bfdf9a\">"+
+		"<status>"+
+		"<basic>closed</basic>"+
+		"<agp-pidf:extended>offline</agp-pidf:extended>"+
+		"</status>"+
+		"<caps:servcaps/>"+
+		"<contact>sip%3A773330001%40sip2sip.info</contact>"+
+		"<timestamp>2015-07-28T03:39:22.400402-07:00</timestamp>"+
+		"</tuple>"+
+		"<dm:person id=\"PID-65494e5a9a87df809859d26f31bfdf9a\">"+
+		"<rpid:activities>"+
+		"<rpid:other>offline</rpid:other>"+
+		"</rpid:activities>"+
+		"<dm:timestamp>2015-07-28T03:39:22.400402-07:00</dm:timestamp>"+
+		"</dm:person>"+
+		"</presence>";*/
+
+
+		mPubSession.publish(PUBLISH_PAYLOAD.getBytes(),"presence",NgnContentType.PIDF);
+
 		return true;
 	}
 
@@ -512,6 +606,43 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 	@Override
 	public boolean PresencePublish(NgnPresenceStatus status) {
 		// TODO Auto-generated method stub
+		final String PUBLISH_String = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+				"<presence xmlns:caps=\"urn:ietf:params:xml:ns:pidf:caps\" xmlns:rpid=\"urn:ietf:params:xml:ns:pidf:rpid\" xmlns:pdm=\"urn:ietf:params:xml:ns:pidf:data-model\" xmlns:op=\"urn:oma:xml:prs:pidf:oma-pres\" entity=\"%s\" xmlns=\"urn:ietf:params:xml:ns:pidf\">" +
+				"<pdm:person id=\"FPNZFGON\">" +
+				"<op:overriding-willingness>" +
+				"<op:basic>%s</op:basic>" +
+				"</op:overriding-willingness>" +
+				"<rpid:activities>" +
+				"<rpid:%s />" +
+				"</rpid:activities>" +
+				"<pdm:note>%s</pdm:note>" +
+				"</pdm:person>" +
+				"<pdm:device id=\"d1983\">" +
+				"<status>" +
+				"<basic>%s</basic>" +
+				"</status>" +
+				"<caps:devcaps>" +
+				"<caps:mobility>" +
+				"<caps:supported>" +
+				"<caps:mobile />" +
+				"</caps:supported>" +
+				"</caps:mobility>" +
+				"</caps:devcaps>" +
+				"<op:network-availability>" +
+				"<op:network id=\"IMS\">" +
+				"<op:active />" +
+				"</op:network>" +
+				"</op:network-availability>" +
+				"<pdm:deviceID>%s</pdm:deviceID>" +
+				"</pdm:device>" +
+				"</presence>";
+
+		String basic ="open";
+		String activity = "busy";
+		String note = "TEST DEVICE";
+		String device = "device";
+		String PUBLISH_PAYLOAD = String.format(PUBLISH_String, mPreferences.getIMPU(), basic, status.toString(), note, basic, device);
+		mPubSession.publish(PUBLISH_PAYLOAD.getBytes(),"presence",NgnContentType.PIDF);
 		return false;
 	}
 
@@ -601,9 +732,10 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 					String.format("OnDialogEvent (%s,%d)", phrase, sessionId));
 
 			switch (eventCode) {
-			// == Connecting ==
+			// == Connecting =
 			case tinyWRAPConstants.tsip_event_code_dialog_connecting: {
 				// Registration
+				Log.d(TAG,"tsip_event_code_dialog_connecting:");
 				if (mSipService.mRegSession != null
 						&& mSipService.mRegSession.getId() == sessionId) {
 					mSipService.mRegSession
@@ -640,12 +772,13 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 						.getSession(sessionId)) != null)) {
 					mySession.setConnectionState(ConnectionState.CONNECTING);
 					mSipService
-							.broadcastSubscriptionEvent(new NgnSubscriptionEventArgs(
-									sessionId,
-									NgnSubscriptionEventTypes.SUBSCRIPTION_INPROGRESS,
-									eventCode, phrase, null, null,
-									((NgnSubscriptionSession) mySession)
-											.getEventPackage()));
+							.
+									broadcastSubscriptionEvent(new NgnSubscriptionEventArgs(
+											sessionId,
+											NgnSubscriptionEventTypes.SUBSCRIPTION_INPROGRESS,
+											eventCode, phrase, null, null,
+											((NgnSubscriptionSession) mySession)
+													.getEventPackage()));
 				}
 
 				break;
@@ -654,6 +787,9 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 			// == Connected == //
 			case tinyWRAPConstants.tsip_event_code_dialog_connected: {
 				// Registration
+
+				Log.d(TAG,"tsip_event_code_dialog_connected");
+
 				if (mSipService.mRegSession != null
 						&& mSipService.mRegSession.getId() == sessionId) {
 					mSipService.mRegSession
@@ -709,6 +845,7 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 			// == Terminating == //
 			case tinyWRAPConstants.tsip_event_code_dialog_terminating: {
 				// Registration
+				Log.d(TAG,"tsip_event_code_dialog_terminating:");
 				if (mSipService.mRegSession != null
 						&& mSipService.mRegSession.getId() == sessionId) {
 					mSipService.mRegSession
@@ -759,6 +896,7 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 			// == Terminated == //
 			case tinyWRAPConstants.tsip_event_code_dialog_terminated: {
 				// Registration
+				Log.d(TAG,"tsip_event_code_dialog_terminated:");
 				if (mSipService.mRegSession != null
 						&& mSipService.mRegSession.getId() == sessionId) {
 					mSipService.mRegSession
@@ -867,8 +1005,10 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
                             return -1;
                         }
                     	
-                        NgnMsrpSession msrpSession = NgnMsrpSession.takeIncomingSession(mSipService.getSipStack(), 
+                        NgnMsrpSession msrpSession = NgnMsrpSession.takeIncomingSession(mSipService.getSipStack(),
                         		(MsrpSession)session, message);
+						msrpSession.accept();
+						Log.d(TAG,"MSRP session established");
                         if (msrpSession == null){
                         	Log.e(TAG,"Failed to create new session");
                             session.hangup();
@@ -916,6 +1056,7 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
                 case tsip_i_request:
                     {
                     	final SipMessage sipMessage = e.getSipMessage();
+
                     	if(sipMessage != null && session != null && ((mySession = NgnAVSession.getSession(session.getId())) != null)){
                     		if(sipMessage.getRequestType() == tsip_request_type_t.tsip_INFO){
                     			final String contentType = sipMessage.getSipHeaderValue("c");
@@ -978,6 +1119,7 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 	            case tsip_o_ect_notify:
 	            case tsip_i_ect_notify:
 	                {
+						Log.d(TAG,"tsip_i_ect_notify");
 	                	if (((mySession = NgnAVSession.getSession(session.getId())) != null) || ((mySession = NgnMsrpSession.getSession(session.getId())) != null)){
 	                		NgnInviteEventTypes eType = (type == tsip_invite_event_type_t.tsip_o_ect_notify ? NgnInviteEventTypes.LOCAL_TRANSFER_NOTIFY : NgnInviteEventTypes.REMOTE_TRANSFER_NOTIFY);
 	                		NgnInviteEventArgs args = new NgnInviteEventArgs(session.getId(), eType, ((NgnInviteSession)mySession).getMediaType(), phrase);
@@ -1345,6 +1487,8 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
 			final tsip_subscribe_event_type_t type = e.getType();
 			SubscriptionSession _session = e.getSession();
 
+
+			Log.d(TAG,"OnSubscriptionEvent" + type);
 			switch (type) {
 			case tsip_i_notify: {
 				final short code = e.getCode();

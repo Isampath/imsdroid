@@ -86,6 +86,7 @@ public class ScreenHome extends BaseScreen {
 							mSipService.unRegister();
 						}
 						else{
+							Log.d(TAG,"Stack registration method");
 							mSipService.register(ScreenHome.this);
 						}
 					}
