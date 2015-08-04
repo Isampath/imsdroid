@@ -290,26 +290,28 @@ private InputMethodManager mInputMethodManager;
 		return ret;
 	}
 	
-	public static void startChat(String remoteParty, boolean bIsPagerMode){
-		final Engine engine = (Engine)NgnEngine.getInstance();
-		if(!NgnStringUtils.isNullOrEmpty(remoteParty) && remoteParty.startsWith("sip:")){
-			remoteParty = NgnUriUtils.getUserName(remoteParty);
-		}
-		
-		if(NgnStringUtils.isNullOrEmpty((sRemoteParty = remoteParty))){
-			Log.e(TAG, "Null Uri");
-			return;
-		}
-		
-		if(engine.getScreenService().show(ScreenChat.class)){
-			final IBaseScreen screen = engine.getScreenService().getScreen(TAG);
-			if(screen instanceof ScreenChat){
-				((ScreenChat)screen).initialize(bIsPagerMode ? NgnMediaType.SMS : NgnMediaType.Chat);
-			}
-		}
-	}
-	
-	//
+	public static void startChat(String remoteParty, boolean bIsPagerMode) {
+        Log.i(TAG, remoteParty);
+        remoteParty = "sip:117102392@broadnet.lk";
+        final Engine engine = (Engine) NgnEngine.getInstance();
+        if (!NgnStringUtils.isNullOrEmpty(remoteParty) && remoteParty.startsWith("sip:")) {
+            remoteParty = NgnUriUtils.getUserName(remoteParty);
+        }
+
+        if (NgnStringUtils.isNullOrEmpty((sRemoteParty = remoteParty))) {
+            Log.e(TAG, "Null Uri");
+            return;
+        }
+
+        if (engine.getScreenService().show(ScreenChat.class)) {
+            final IBaseScreen screen = engine.getScreenService().getScreen(TAG);
+            if (screen instanceof ScreenChat) {
+                ((ScreenChat) screen).initialize(bIsPagerMode ? NgnMediaType.SMS : NgnMediaType.Chat);
+            }
+        }
+    }
+
+    //
 	// HistoryEventSMSFilter
 	//
 	static class HistoryEventChatFilter implements NgnPredicate<NgnHistoryEvent>{

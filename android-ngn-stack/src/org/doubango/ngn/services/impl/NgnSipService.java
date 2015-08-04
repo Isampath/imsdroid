@@ -1057,7 +1057,12 @@ public class NgnSipService extends NgnBaseService implements INgnSipService,
                     {
                     	final SipMessage sipMessage = e.getSipMessage();
 
-                    	if(sipMessage != null && session != null && ((mySession = NgnAVSession.getSession(session.getId())) != null)){
+                        NgnMsrpSession msrpSession = NgnMsrpSession.getSession(session.getId());
+                        if (msrpSession != null) {
+                            Log.i("THARAKA", "MSRP session found");
+                        }
+
+                        if(sipMessage != null && session != null && ((mySession = NgnAVSession.getSession(session.getId())) != null)){
                     		if(sipMessage.getRequestType() == tsip_request_type_t.tsip_INFO){
                     			final String contentType = sipMessage.getSipHeaderValue("c");
                     			if(NgnStringUtils.equals(contentType, NgnContentType.DOUBANGO_DEVICE_INFO, true)){
